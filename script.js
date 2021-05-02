@@ -1,15 +1,136 @@
 // script.js
+const canvas = document.getElementById("user-image");
+const fileInput = document.getElementById("image-input");
+const voiceSelect = document.getElementById('voice-selection');
+const btn = document.getElementById('generate-meme');
+const topText = document.getElementById('text-top');
+const botText = document.getElementById('text-bottom');
+const icon = document.getElementById('volume-group').getElementsByTagName('img')[0];
+const volume = document.getElementById('volume-group').getElementsByTagName('input')[0];
+var clearReadBtn = document.getElementById("generate-meme").getElementsByTagName('button');
+var counter = 0;
+var generateBtn , clearBtn, readBtn;
+var voices;
+var voiceVol = 1;
+// Copy and pasted from the given resource. I assume this is okay given that the implementation video has identical format to this.
+function populateVoiceList() {
+  if(typeof speechSynthesis === 'undefined') {
+    return;
+  }
 
+  voices = speechSynthesis.getVoices();
+
+  for(var i = 0; i < voices.length; i++) {
+    var option = document.createElement('option');
+    option.textContent = voices[i].name + ' (' + voices[i].lang + ')';
+
+    if(voices[i].default) {
+      option.textContent += ' -- DEFAULT';
+    }
+
+    option.setAttribute('data-lang', voices[i].lang);
+    option.setAttribute('data-name', voices[i].name);
+    voiceSelect.appendChild(option);
+  }
+}
+voiceSelect.disabled = false;
+voiceSelect.remove(0);
+populateVoiceList();
+
+if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+  speechSynthesis.onvoiceschanged = populateVoiceList;
+}
+
+for (var temp of clearReadBtn) {
+  if (counter == 0){
+    generateBtn = temp;
+    counter++;
+  }else if (counter == 1){
+    clearBtn = temp;
+    counter++;
+  }else{
+    readBtn = temp;
+    counter++;
+  }
+}
+
+fileInput.addEventListener('change', function(e) {
+  img.src = URL.createObjectURL(e.target.files[0]);
+  img.alt = e.target.files[0].name;
+});
+
+const ctx = canvas.getContext('2d');
 const img = new Image(); // used to load image from <input> and draw to canvas
 
-// Fires whenever the img object loads a new image (such as with img.src =)
 img.addEventListener('load', () => {
-  // TODO
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle= "black";
+  ctx.fillRect(0,0, 400, 400);
+  var dimensions = getDimensions(canvas.width, canvas.height, img.width, img.height);
+  ctx.drawImage(img, dimensions.startX, dimensions.startY, dimensions.width, dimensions.height);
+  generateBtn.disabled = false;
+  clearBtn.disabled = true;
+  readBtn.disabled = true;
+});
 
-  // Some helpful tips:
-  // - Fill the whole Canvas with black first to add borders on non-square images, then draw on top
-  // - Clear the form when a new image is selected
-  // - If you draw the image to canvas here, it will update as soon as a new image is selected
+
+btn.addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  ctx.font = '50px Impact';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'white';
+  ctx.fillText(topText.value.toUpperCase(), 200, 50, 400);
+  ctx.fillText(botText.value.toUpperCase(), 200, 390, 400);
+
+ clearBtn.disabled = false;
+ readBtn.disabled = false;
+ generateBtn.disabled = true;
+});
+
+clearBtn.addEventListener('click', () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  generateBtn.disabled = false;
+  clearBtn.disabled = true;
+  readBtn.disabled = true;
+});
+
+readBtn.addEventListener('click', function(e) {
+  e.preventDefault();
+  console.log("Read clicked");
+  var utterThisTop = new SpeechSynthesisUtterance(topText.value);
+  var utterThisBottom = new SpeechSynthesisUtterance(botText.value)
+  utterThisTop.volume = voiceVol;
+  utterThisBottom.volume = voiceVol;
+  var selectedOption = voiceSelect.selectedOptions[0].getAttribute('data-name');
+  console.log(selectedOption);
+  for(var i = 0; i < voices.length ; i++) {
+    if(voices[i].name === selectedOption) {
+      utterThisTop.voice = voices[i];
+      utterThisBottom.voice = voices[i];
+    }
+  }
+
+  speechSynthesis.speak(utterThisTop);
+  console.log("Top uttered");
+  speechSynthesis.speak(utterThisBottom);
+  console.log("Bottom uttered");
+});
+
+volume.addEventListener('change', function(e) {
+  if (volume.value == 0){
+    icon.src = "/icons/volume-level-0.svg";
+    voiceVol = 0;
+  }else if (volume.value < 34){
+    icon.src = "/icons/volume-level-1.svg"
+    voiceVol = volume.value/100;
+  }else if (volume.value < 67){
+    icon.src = "/icons/volume-level-2.svg"
+    voiceVol = volume.value/100;
+  }else{
+    icon.src = "/icons/volume-level-3.svg"
+    voiceVol = 1
+  }
 });
 
 /**
@@ -23,12 +144,12 @@ img.addEventListener('load', () => {
  * and also the starting X and starting Y coordinate to be used when you draw the new image to the
  * Canvas. These coordinates align with the top left of the image.
  */
-function getDimmensions(canvasWidth, canvasHeight, imageWidth, imageHeight) {
+function getDimensions(canvasWidth, canvasHeight, imageWidth, imageHeight) {
   let aspectRatio, height, width, startX, startY;
 
   // Get the aspect ratio, used so the picture always fits inside the canvas
   aspectRatio = imageWidth / imageHeight;
-
+  
   // If the apsect ratio is less than 1 it's a verical image
   if (aspectRatio < 1) {
     // Height is the max possible given the canvas
