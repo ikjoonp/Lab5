@@ -95,6 +95,8 @@ clearBtn.addEventListener('click', () => {
   readBtn.disabled = true;
 });
 
+// Successfully reads the meme initially but stops after using too many times/weird inputs. Seems to be buggy.
+
 readBtn.addEventListener('click', function(e) {
   e.preventDefault();
   console.log("Read clicked");
